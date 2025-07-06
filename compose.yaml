@@ -1,0 +1,41 @@
+services:
+  anubis:
+    image: ghcr.io/gigirassy/anubis:main
+    environment:
+      BIND: ":8080"
+      DIFFICULTY: "5"
+      METRICS_BIND: ":9090"
+      SERVE_ROBOTS_TXT: "true"
+      TARGET: "http://redlib:8080"
+      POLICY_FNAME: "/data/cfg/botPolicy.yaml"
+      OG_PASSTHROUGH: "true"
+      OG_EXPIRY_TIME: "24h"
+    volumes:
+      - "./botPolicy.yaml:/data/cfg/botPolicy.yaml:ro"
+    ports:
+      - "127.0.0.1:4243:8080"
+    networks:
+      - redlib
+  redlib:
+    image: quay.io/redlib/redlib:latest
+    restart: always
+    container_name: "redlib"
+    ports:
+      - "127.0.0.1:4242:8080" # Specify `127.0.0.1:8080:8080` instead if using a reverse proxy
+    user: nobody
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+      # - seccomp=seccomp-redlib.json
+    cap_drop:
+      - ALL
+    env_file: .env
+    networks:
+      - redlib
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "--tries=1", "http://localhost:4243/settings"]
+      interval: 5m
+      timeout: 3s
+
+networks:
+  redlib:
